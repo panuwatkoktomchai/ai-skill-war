@@ -1,0 +1,9 @@
+body { margin: 0; font-family: system-ui, sans-serif; background: #1e1b4b; color: #fff; }
+.app { max-width: 460px; margin: 0 auto; padding: 24px 16px; text-align: center; }
+.status { min-height: 1.5em; }
+.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+.card { aspect-ratio: 1; font-size: 2.2rem; border: 0; border-radius: 12px; background: #4f46e5; color: #fff; cursor: pointer; }
+.card.up { background: #fff; cursor: default; }
+.card.matched { background: #bbf7d0; }
+.win { background: #fff; color: #111; border-radius: 12px; padding: 16px; }
+.restart { font-size: 1rem; padding: 8px 20px; border: 0; border-radius: 8px; background: #4f46e5; color: #fff; cursor: pointer; }
