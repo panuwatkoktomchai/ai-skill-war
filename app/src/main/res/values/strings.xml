@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Every Thai text the user sees lives here, not in Kotlin code. -->
+<resources>
+  <string name="app_name">ผู้ช่วย AI</string>
+  <string name="home_greeting">สวัสดีครับ</string>
+  <string name="home_intro">ผมเป็นผู้ช่วย AI พร้อมคุยกับคุณ</string>
+</resources>

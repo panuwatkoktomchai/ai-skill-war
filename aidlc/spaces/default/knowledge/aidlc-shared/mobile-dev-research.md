@@ -8,26 +8,10 @@ How mobile developers set up AI agents in 2026, and why this project chose its s
 - **Install few skills.** The Android team warns each installed skill adds 100–200 tokens to every task, so install only what the project uses.
 - **Project rules in steering files** (Kiro `.kiro/steering/`, Claude Code `CLAUDE.md`, Cursor rules), one topic per file.
 
-## Skills installed here (Expo, commit 88d9bd7)
-| Skill | Use it for |
-|---|---|
-| expo-overview | Entry point. Load first for any Expo task |
-| expo-project-structure | Folder layout of the new app |
-| expo-router | Screens, tabs, modals, headers |
-| expo-native-ui | Native-feeling controls, storage, media |
-| expo-design-system | Theme tokens and shared components |
-| expo-data-fetching | Calling the backend, loading/error states, offline |
-| expo-dev-client | Only if a development build becomes necessary |
-
-Not installed:
-- Paid EAS skills (app stores, hosting, workflows, update).
-- iOS-only skills.
-- Android native skills. These are for Kotlin; add `android-cli` or `testing-setup` from github.com/android/skills only if the team switches to native.
-
-## Stack decision: Expo + Expo Go, not native Kotlin, not a PWA
-- **Native Kotlin/Compose:** best platform access, but every change needs a Gradle build and the team does not write Kotlin daily. Too slow for one day.
-- **PWA:** fastest to build, but it is not an installed Android app, and Thai voice support depends on the browser.
-- **Expo:** React + TypeScript, which the team already knows. Expo Go runs on the real phone with no build and updates live on save. It can still become a development build or an APK later.
+## Stack decision (changed 20 Nov): native Android, Kotlin + Jetpack Compose
+- The team chose native Android only. The Expo skills were removed; Google's official Android skills (github.com/android/skills) can be added if needed, after reading them.
+- Kotlin + Compose is Google's recommended stack. Each change needs a Gradle build (about 30 s incremental on this Mac).
+- Checks: Spotless + ktlint (formatting, like Prettier) with the Compose rules set, Android Lint with warnings as errors (like ESLint), Kotlin warnings as errors. detekt was not added: its stable 1.23.x only supports Kotlin 2.0, and this project uses Kotlin 2.4.
 
 ## UX for older users (sources)
 - Touch targets: Apple's 44 pt and Android's 48 dp are minimums; research on older adults recommends larger targets with more spacing.

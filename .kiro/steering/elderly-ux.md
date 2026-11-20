@@ -6,7 +6,7 @@ inclusion: always
 The users are 60+, may see poorly, may have shaky hands, and may be afraid of "pressing the wrong thing".
 
 ## Size and readability
-- Body text is at least **18 sp** and headings at least 24 sp. Respect the phone's font-scale setting; never set `allowFontScaling={false}`.
+- Body text is at least **18 sp** and headings at least 24 sp. Respect the phone's font-scale setting: sizes in `sp`, never fixed pixel text.
 - Touch targets are at least **56 dp** high, which is more than the 48 dp Android minimum, with at least 12 dp between them.
 - Text contrast is at least 7:1 (WCAG AAA). Do not use grey text on white.
 - Use a plain sans-serif font that renders Thai well, such as Sarabun or Noto Sans Thai, and keep line height generous.
@@ -21,7 +21,7 @@ The users are 60+, may see poorly, may have shaky hands, and may be afraid of "p
 - Confirm anything that cannot be undone (sending, calling, deleting) in a dialog with two big buttons.
 - Show what is happening: "กำลังฟัง…" (listening…), "กำลังคิด…" (thinking…). Never leave a blank screen.
 - Error messages say what to do next, in plain Thai, with a retry button.
-- Speak important answers aloud as well (`expo-speech`), and offer a button to repeat them.
+- Speak important answers aloud as well (Android `TextToSpeech` with the Thai locale), and offer a button to repeat them.
 
 ## Voice first
 - The main screen has one large microphone button. Speaking must be the easiest way to use the app.

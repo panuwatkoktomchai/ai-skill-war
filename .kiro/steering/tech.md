@@ -3,28 +3,30 @@ inclusion: always
 ---
 # Tech stack and rules
 
-## Stack
-- **Mobile app:** Expo (React Native) with TypeScript in strict mode and Expo Router. The app lives in `app/` at the repo root.
-- **Running on the phone:** run `npx expo start` and scan the QR code with **Expo Go** on the Android phone. The phone and laptop must be on the same Wi-Fi; if they are not, use `npx expo start --tunnel`.
-- **Backend:** a small API that holds every secret and calls the LLM, for example AWS Lambda with Bedrock if the organisers' account allows it. **Never put an API key in the app.**
-- Use the Expo skills in `.kiro/skills/expo-*` for Expo work. Load `expo-overview` first.
+## Stack (team decision 20 Nov: native Android only, no Expo, no iOS)
+- **Language and UI:** Kotlin + Jetpack Compose (Material 3). One Gradle project at the repo root, app module in `app/`, package `com.apgame.companion`.
+- **Versions:** every library and plugin version lives in `gradle/libs.versions.toml`. Never write a version inside a `build.gradle.kts`.
+- **SDK:** compileSdk/targetSdk 36, minSdk 26 (Android 8.0), Java 17 bytecode, built with JDK 21.
+- **Backend:** a small API that holds every secret and calls the LLM, for example AWS Lambda with Bedrock if the organisers' account allows it. **Never put an API key in the app** (not in code, not in `BuildConfig`, not in resources).
 
-## Why Expo with Expo Go
-- Only one day to build. Expo Go runs the code on the real phone in seconds with no Gradle build, and saving a file updates the phone straight away.
-- The team already writes React and TypeScript.
+## Architecture (Google's recommended app architecture)
+- UI (Composables) → ViewModel (holds `StateFlow<UiState>`) → Repository → data sources (Room, Retrofit/Ktor).
+- State flows down, events flow up. Composables draw state and call ViewModel functions; no logic inside Composables.
+- Long work runs in coroutines (`viewModelScope`), never on the main thread.
 
-## Limits of Expo Go (check before choosing a library)
-- Only libraries bundled in Expo Go work. A library that needs its own native code needs a development build (`expo-dev-client`). That is a Gradle build of 10+ minutes, so ask the team before adding one.
-- Works in Expo Go:
-  - text-to-speech (`expo-speech`)
-  - recording audio (`expo-audio`)
-  - notifications (`expo-notifications`, local notifications only)
-  - storage (`expo-sqlite`, `expo-secure-store`)
-  - camera (`expo-camera`)
-- Thai speech-to-text: on-device recognition needs a development build. In Expo Go, record with `expo-audio` and send the audio to a cloud speech-to-text service through the backend.
+## Running on the phone
+- Turn on Developer options + USB debugging on the Android phone, plug it in, then `adb devices` must list it.
+- `./gradlew installDebug` installs the app; open "ผู้ช่วย AI" on the phone.
+- Or open the repo in Android Studio and press Run.
+
+## Checks (run before every commit)
+- `./gradlew spotlessApply` formats Kotlin (ktlint, Android Studio style, 100-char lines, plus Compose rules). This is the Kotlin equivalent of Prettier.
+- `./gradlew spotlessCheck lint` must pass. `lint` is Android Lint with warnings as errors; Kotlin compiler warnings are errors too. This is the equivalent of ESLint.
+- Never switch off a rule for a whole file. Suppress one finding with `@Suppress("RuleName")` and a comment saying why.
 
 ## Code rules
-- Screens stay small. Logic lives in hooks or `lib/`, not inside JSX.
-- Every user-facing string lives in `constants/strings.ts` (Thai).
-- Every network call shows loading and error states. No silent failures.
-- No `any`. Validate data from the network with Zod before using it.
+- Every user-facing string lives in `app/src/main/res/values/strings.xml` (Thai). Never hard-code Thai text in Kotlin.
+- Named constants for meaningful numbers (sizes, timeouts); no magic numbers in Composables.
+- Every network call shows loading and error states. No silent failures, no empty `catch`.
+- Validate data from the network (kotlinx.serialization with explicit types) before using it.
+- Ask the team before adding a new library; write its licence and last release date in the commit message.

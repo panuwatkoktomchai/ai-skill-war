@@ -46,3 +46,13 @@ aidlc/diagnostics/
 .kiro/sensors/
 .kiro/settings/
 .kiro/skills/aidlc/
+
+# Android / Gradle build output and machine-specific settings.
+.gradle/
+build/
+local.properties
+.idea/
+.kotlin/
+*.apk
+*.aab
+captures/
