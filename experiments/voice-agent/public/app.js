@@ -83,7 +83,7 @@ function handleToolCall(session, toolCall) {
 }
 
 function handleMessage(session, msg) {
-  if (msg.toolCall) handleToolCall(session, msg.toolCall);
+  if (msg.toolCall && session) handleToolCall(session, msg.toolCall);
 
   const sc = msg.serverContent;
   if (!sc) return;
@@ -121,7 +121,9 @@ async function startCall() {
   const player = new PcmPlayer();
 
   setStatus('กำลังต่อสาย...');
-  const session = await ai.live.connect({
+  // ประกาศก่อน connect เพราะ onmessage (setupComplete) อาจยิงมาก่อน connect() จะ resolve
+  let session = null;
+  session = await ai.live.connect({
     model,
     config: {
       responseModalities: [Modality.AUDIO],
