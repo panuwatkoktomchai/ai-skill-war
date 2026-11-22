@@ -8,6 +8,13 @@ import {
   buildSystemInstruction,
 } from '/agent-config.js';
 import { scoreCall } from '/risk.js';
+import { CallGuard, MAX_CALL_MS, SILENCE_HANGUP_MS } from '/call-guard.js';
+
+// เสียงไมค์ดังเกินค่านี้ถือว่าผู้โทรกำลังพูด (กันเสียงลมหายใจ/เสียงรบกวนเบาๆ)
+const CALLER_VOICE_LEVEL = 0.08;
+// เวลาให้ AI พูดประโยคลาก่อนตัดสาย
+const GOODBYE_GRACE_MS = 5_000;
+const MAX_DURATION_GRACE_MS = 12_000;
 
 const PHONE_RATE = 8000;
 const WIDEBAND_RATE = 16000;
@@ -142,6 +149,7 @@ function handleMessage(session, msg) {
   if (!sc) return;
 
   if (sc.inputTranscription?.text) {
+    call?.guard.noteCallerActivity();
     appendTranscript('caller', sc.inputTranscription.text);
     lastCallerSpeechAt = performance.now();
     waitingFirstAudio = true;
@@ -198,15 +206,34 @@ async function startCall() {
     },
   });
 
+  const guard = new CallGuard({
+    isAiSpeaking: () => player.busy,
+    onSilence: () => {
+      setStatus(`ผู้โทรเงียบเกิน ${SILENCE_HANGUP_MS / 1000} วินาที · กำลังวางสาย`);
+      sendSystemNote(session, 'ผู้โทรเงียบไปนาน ให้พูดประโยคนี้ประโยคเดียว "ถ้าไม่มีธุระ ดิฉันขออนุญาตวางสายนะคะ" ไม่ต้องเรียก report_call');
+      renderSilentCall(callerNumber);
+      endCallLater(GOODBYE_GRACE_MS);
+    },
+    onMaxDuration: () => {
+      setStatus(`ครบ ${MAX_CALL_MS / 60000} นาที · กำลังวางสาย`);
+      sendSystemNote(session, 'ครบเวลาสูงสุดของสายแล้ว ให้เรียก report_call ด้วยข้อมูลที่มีทันที แล้วพูดลาตาม action');
+      endCallLater(MAX_DURATION_GRACE_MS);
+    },
+  });
+
   const targetRate = ui.phoneMode.checked ? PHONE_RATE : WIDEBAND_RATE;
   const mic = new MicStreamer({
     targetRate,
     onChunk: (data, mimeType) => session.sendRealtimeInput({ audio: { data, mimeType } }),
-    onLevel: (peak) => (ui.level.value = peak),
+    onLevel: (peak) => {
+      ui.level.value = peak;
+      if (peak > CALLER_VOICE_LEVEL) guard.noteCallerActivity();
+    },
   });
   await mic.start();
 
-  call = { session, mic, player, callerNumber };
+  call = { session, mic, player, callerNumber, guard };
+  guard.start();
   // ให้ AI เปิดสายก่อน เหมือนตอนรับสายจริง
   session.sendClientContent({ turns: [{ role: 'user', parts: [{ text: '(มีสายเข้า ผู้โทรรออยู่)' }] }], turnComplete: true });
 
@@ -215,10 +242,34 @@ async function startCall() {
   setStatus(`คุยได้เลย · เสียงแบบ ${targetRate === PHONE_RATE ? 'สายโทรศัพท์ 8 kHz' : '16 kHz'}`);
 }
 
+// วางสายหลังให้เวลา AI พูดลา · ถ้าระหว่างนั้นเริ่มสายใหม่แล้ว ห้ามไปตัดสายใหม่
+function endCallLater(ms) {
+  const current = call;
+  setTimeout(() => {
+    if (call && call === current) void endCall();
+  }, ms);
+}
+
+// ข้อความจากระบบ (ผู้โทรไม่ได้ยิน) สั่ง AI ให้ทำอะไรบางอย่างกลางสาย
+function sendSystemNote(session, text) {
+  session.sendClientContent({ turns: [{ role: 'user', parts: [{ text: `(ระบบ: ${text})` }] }], turnComplete: true });
+}
+
+// สายเงียบไม่ส่ง LINE ทุกครั้ง (รบกวนเกิน) แต่เก็บไว้รวมในสรุปรายวัน
+function renderSilentCall(callerNumber) {
+  const card = document.createElement('article');
+  card.className = 'report silent';
+  card.textContent = `สายเงียบ · เบอร์ ${callerNumber || '-'} · ผู้โทรไม่พูดเกิน ${
+    SILENCE_HANGUP_MS / 1000
+  } วินาที วางสายแล้ว · ไม่โอน ไม่แจ้ง LINE ทันที (เก็บไว้ในสรุปรายวัน)`;
+  ui.reports.prepend(card);
+}
+
 async function endCall() {
   if (!call) return;
-  const { session, mic, player } = call;
+  const { session, mic, player, guard } = call;
   call = null;
+  guard.stop();
   await mic.stop();
   await player.close();
   try {

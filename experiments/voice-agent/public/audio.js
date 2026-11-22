@@ -117,6 +117,11 @@ export class PcmPlayer {
     source.onended = () => this.sources.delete(source);
   }
 
+  // ยังมีเสียง AI ค้างเล่นอยู่ไหม
+  get busy() {
+    return this.sources.size > 0 && this.ctx.currentTime < this.nextTime;
+  }
+
   // ผู้โทรพูดแทรก: หยุดเสียง AI ที่ค้างคิวทันที
   interrupt() {
     for (const s of this.sources) s.stop();
