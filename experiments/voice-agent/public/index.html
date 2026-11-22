@@ -17,6 +17,7 @@
   <section class="controls">
     <button id="call-btn" type="button">รับสาย (เริ่มทดสอบ)</button>
     <label><input id="phone-mode" type="checkbox" checked> จำลองเสียงสายโทรศัพท์ (8 kHz)</label>
+    <label>เบอร์ที่โทรเข้า (จำลอง) <input id="caller-number" type="tel" value="+697 2 555 0199" size="16"></label>
   </section>
 
   <section class="meters">
@@ -31,8 +32,8 @@
       <div id="transcript" class="transcript" aria-live="polite"></div>
     </div>
     <div>
-      <h2>ผลที่ส่งเข้า LINE</h2>
-      <div id="report" class="report" hidden></div>
+      <h2>ผลที่ส่งเข้า LINE (ใหม่สุดอยู่บน)</h2>
+      <div id="reports" class="reports"></div>
       <h2>บทให้คนทดสอบอ่าน</h2>
       <ol id="scripts" class="scripts"></ol>
     </div>

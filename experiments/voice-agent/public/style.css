@@ -13,6 +13,9 @@ button:disabled { opacity: .5; cursor: wait; }
 .transcript { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; height: 420px; overflow-y: auto; }
 .transcript p { margin: 0 0 8px; }
 .transcript p[data-role="ai"] b { color: var(--ok); }
+.reports { display: flex; flex-direction: column; gap: 12px; }
+input[type="tel"] { font: inherit; padding: 4px 8px; border: 1px solid var(--border); border-radius: 8px; }
+.transfer { background: #e8f7ee; border: 2px solid var(--ok); border-radius: 12px; padding: 10px 12px; font-size: 18px; }
 .report { background: var(--card); border: 2px solid var(--border); border-radius: 12px; padding: 12px; }
 .report.bad { border-color: var(--bad); } .report.warn { border-color: var(--warn); } .report.ok { border-color: var(--ok); }
 .line-head { font-size: 13px; color: var(--line); font-weight: 600; }

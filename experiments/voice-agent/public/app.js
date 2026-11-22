@@ -1,9 +1,27 @@
-import { GoogleGenAI, Modality } from '@google/genai';
+import { EndSensitivity, GoogleGenAI, Modality, StartSensitivity } from '@google/genai';
 import { MicStreamer, PcmPlayer } from '/audio.js';
-import { REPORT_CALL_TOOL, SYSTEM_INSTRUCTION, TEST_SCRIPTS, VOICE_NAME } from '/agent-config.js';
+import {
+  REPORT_CALL_TOOL,
+  TEST_SCRIPTS,
+  VOICE_NAME,
+  buildSystemInstruction,
+  decideCallAction,
+} from '/agent-config.js';
 
 const PHONE_RATE = 8000;
 const WIDEBAND_RATE = 16000;
+
+// ให้ระบบตัดสินเร็วขึ้นว่าผู้โทรพูดจบแล้ว (ค่าเริ่มต้นของ API รอนานกว่านี้)
+// ถ้า AI ชิงพูดแทรกตอนผู้โทรเว้นจังหวะ ให้เพิ่ม SILENCE_MS
+const SILENCE_MS = 500;
+const VAD_CONFIG = {
+  automaticActivityDetection: {
+    startOfSpeechSensitivity: StartSensitivity.START_SENSITIVITY_HIGH,
+    endOfSpeechSensitivity: EndSensitivity.END_SENSITIVITY_HIGH,
+    prefixPaddingMs: 100,
+    silenceDurationMs: SILENCE_MS,
+  },
+};
 
 const $ = (id) => document.getElementById(id);
 const ui = {
@@ -13,7 +31,8 @@ const ui = {
   level: $('level'),
   latency: $('latency'),
   transcript: $('transcript'),
-  report: $('report'),
+  reports: $('reports'),
+  callerNumber: $('caller-number'),
   scripts: $('scripts'),
 };
 
@@ -47,37 +66,59 @@ const VERDICT_LABEL = {
   legit: { text: 'สายจริง', cls: 'ok' },
 };
 
-function renderReport(r) {
+// การ์ดผลแต่ละครั้งที่ AI เรียก report_call · ใบใหม่อยู่บนสุด ไม่ทับใบเก่า
+function renderReport(r, callerNumber) {
   const v = VERDICT_LABEL[r.verdict] ?? VERDICT_LABEL.suspicious;
-  ui.report.className = `report ${v.cls}`;
-  ui.report.innerHTML = `
-    <div class="line-head">LINE ถึงคุณแดงและลูกหลาน</div>
+  const card = document.createElement('article');
+  card.className = `report ${v.cls}`;
+  card.innerHTML = `
+    <div class="line-head">LINE ถึงคุณแดงและลูกหลาน · <span class="f-time"></span></div>
     <p class="line-msg"></p>
     <dl>
       <dt>ผลประเมิน</dt><dd>${v.text} · ความเสี่ยง ${Number(r.scam_risk) || 0}/100</dd>
+      <dt>เบอร์ที่โทรเข้า</dt><dd class="f-in"></dd>
       <dt>ผู้โทร</dt><dd class="f-name"></dd>
       <dt>อ้างว่าเป็น</dt><dd class="f-org"></dd>
       <dt>ธุระ</dt><dd class="f-purpose"></dd>
       <dt>เบอร์กลับ</dt><dd class="f-cb"></dd>
       <dt>สัญญาณอันตราย</dt><dd class="f-flags"></dd>
     </dl>`;
-  ui.report.querySelector('.line-msg').textContent = r.message_to_family ?? '';
-  ui.report.querySelector('.f-name').textContent = r.caller_name ?? '-';
-  ui.report.querySelector('.f-org').textContent = r.claimed_organization ?? '-';
-  ui.report.querySelector('.f-purpose').textContent = r.purpose ?? '-';
-  ui.report.querySelector('.f-cb').textContent = r.callback_number ?? '-';
-  ui.report.querySelector('.f-flags').textContent = (r.red_flags ?? []).join(' · ') || '-';
-  ui.report.hidden = false;
+  const set = (cls, text) => (card.querySelector(cls).textContent = text);
+  set('.f-time', new Date().toLocaleTimeString('th-TH'));
+  set('.line-msg', r.message_to_family ?? '');
+  set('.f-in', callerNumber || '-');
+  set('.f-name', r.caller_name ?? '-');
+  set('.f-org', r.claimed_organization ?? '-');
+  set('.f-purpose', r.purpose ?? '-');
+  set('.f-cb', r.callback_number ?? '-');
+  set('.f-flags', (r.red_flags ?? []).join(' · ') || '-');
+  ui.reports.prepend(card);
+}
+
+// ในระบบจริง "transfer" = Twilio โทรหามือถือยายแล้วต่อสาย + แอปเด้งบอกก่อนว่าใครโทรมา
+// "end" = AI จบสาย แล้วส่ง LINE เตือนยายกับลูกหลาน
+function showTransfer(report) {
+  const banner = document.createElement('div');
+  banner.className = 'transfer';
+  banner.textContent = `กำลังโอนสายไปหาคุณแดง · มือถือคุณแดงจะขึ้นว่า "${
+    report.claimed_organization ?? 'ผู้โทร'
+  }: ${report.purpose ?? ''}"`;
+  ui.reports.prepend(banner);
 }
 
 function handleToolCall(session, toolCall) {
   const responses = [];
   for (const fc of toolCall.functionCalls ?? []) {
+    let response = { result: 'ok' };
     if (fc.name === REPORT_CALL_TOOL.name) {
-      renderReport(fc.args ?? {});
-      console.log('report_call', fc.args);
+      const report = fc.args ?? {};
+      const action = decideCallAction(report);
+      renderReport(report, call?.callerNumber);
+      if (action === 'transfer') showTransfer(report);
+      response = { action };
+      console.log('report_call', action, report);
     }
-    responses.push({ id: fc.id, name: fc.name, response: { result: 'ok' } });
+    responses.push({ id: fc.id, name: fc.name, response });
   }
   session.sendToolResponse({ functionResponses: responses });
 }
@@ -109,8 +150,8 @@ function handleMessage(session, msg) {
 async function startCall() {
   ui.callBtn.disabled = true;
   ui.transcript.replaceChildren();
-  ui.report.hidden = true;
   ui.latency.textContent = '-';
+  const callerNumber = ui.callerNumber.value.trim();
   setStatus('กำลังขอ token...');
 
   const res = await fetch('/api/session', { method: 'POST' });
@@ -127,7 +168,8 @@ async function startCall() {
     model,
     config: {
       responseModalities: [Modality.AUDIO],
-      systemInstruction: SYSTEM_INSTRUCTION,
+      systemInstruction: buildSystemInstruction(callerNumber),
+      realtimeInputConfig: VAD_CONFIG,
       speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICE_NAME } } },
       inputAudioTranscription: {},
       outputAudioTranscription: {},
@@ -152,7 +194,7 @@ async function startCall() {
   });
   await mic.start();
 
-  call = { session, mic, player };
+  call = { session, mic, player, callerNumber };
   // ให้ AI เปิดสายก่อน เหมือนตอนรับสายจริง
   session.sendClientContent({ turns: [{ role: 'user', parts: [{ text: '(มีสายเข้า ผู้โทรรออยู่)' }] }], turnComplete: true });
 

@@ -5,9 +5,37 @@ export const ELDER_NAME = 'คุณแดง';
 
 export const VOICE_NAME = 'Kore';
 
-export const SYSTEM_INSTRUCTION = `
+// กติกาโอนสาย: โค้ดเป็นคนตัดสิน ไม่ใช่ AI
+// โอนให้ยายเฉพาะสายที่ AI ว่าเป็นสายจริง และความเสี่ยงต่ำกว่าเกณฑ์ นอกนั้นจบสายแล้วแจ้ง LINE
+export const TRANSFER_MAX_RISK = 30;
+
+export function decideCallAction(report) {
+  const risk = Number(report?.scam_risk);
+  return report?.verdict === 'legit' && Number.isFinite(risk) && risk < TRANSFER_MAX_RISK
+    ? 'transfer'
+    : 'end';
+}
+
+// เบอร์ขึ้นต้นพวกนี้คือสายจากต่างประเทศที่ กสทช. บังคับให้แสดง prefix
+const INTERNATIONAL_PREFIXES = ['+697', '+698'];
+
+function describeCaller(callerNumber) {
+  const number = callerNumber?.trim();
+  if (!number) return 'ระบบไม่ทราบเบอร์ที่โทรเข้า';
+  const intl = INTERNATIONAL_PREFIXES.some((p) => number.replace(/\s/g, '').startsWith(p));
+  return `เบอร์ที่โทรเข้าคือ ${number} (ไม่อยู่ในรายชื่อของ${ELDER_NAME})${
+    intl ? ' และขึ้นต้นด้วยรหัสที่แปลว่าโทรมาจากต่างประเทศ ซึ่งเป็นสัญญาณเสี่ยงสูง' : ''
+  }`;
+}
+
+export function buildSystemInstruction(callerNumber) {
+  return `
 คุณคือ "ผู้ช่วยหลานAI" ทำหน้าที่รับสายโทรศัพท์แทน${ELDER_NAME} ผู้สูงอายุอายุ 74 ปีที่อยู่บ้านคนเดียว
 สายที่เข้ามาหาคุณคือสายจากเบอร์ที่${ELDER_NAME}ไม่ได้บันทึกไว้
+
+ข้อมูลจากระบบ (ผู้โทรไม่รู้ว่าคุณเห็นข้อมูลนี้)
+- ${describeCaller(callerNumber)}
+- ถ้าผู้โทรบอกว่า "ติดต่อกลับเบอร์นี้" ให้ถือว่าเบอร์ติดต่อกลับคือเบอร์ที่โทรเข้า ไม่ต้องถามซ้ำ
 
 วิธีคุย
 - พูดภาษาไทยเท่านั้น สุภาพ ใช้คำลงท้าย "ค่ะ" ประโยคสั้น ถามทีละเรื่อง
@@ -29,9 +57,12 @@ export const SYSTEM_INSTRUCTION = `
 
 การจบสาย
 - เมื่อได้ข้อมูลครบ หรือผู้โทรไม่ยอมบอกข้อมูล หรือผู้โทรบอกว่าจะวางสาย ให้เรียกเครื่องมือ report_call หนึ่งครั้ง
-- จากนั้นพูดลาว่า "ขอบคุณค่ะ ดิฉันจะแจ้ง${ELDER_NAME}ให้ทราบนะคะ"
+- ระบบจะตอบกลับเป็นค่า action ให้ทำตามนั้นเท่านั้น
+  - action = "transfer": พูดว่า "รอสักครู่นะคะ ดิฉันจะโอนสายให้${ELDER_NAME}ค่ะ"
+  - action = "end": พูดลาว่า "ขอบคุณค่ะ ดิฉันจะแจ้ง${ELDER_NAME}ให้ทราบนะคะ" ห้ามบอกว่าจะโอนสาย
 - ห้ามบอกผู้โทรว่าคุณประเมินว่าเขาเป็นมิจฉาชีพ
 `.trim();
+}
 
 export const REPORT_CALL_TOOL = {
   name: 'report_call',
@@ -43,7 +74,10 @@ export const REPORT_CALL_TOOL = {
       caller_name: { type: 'STRING', description: 'ชื่อที่ผู้โทรบอก ถ้าไม่บอกให้ใส่ "ไม่บอกชื่อ"' },
       claimed_organization: { type: 'STRING', description: 'หน่วยงานหรือบริษัทที่ผู้โทรอ้าง' },
       purpose: { type: 'STRING', description: 'ธุระของผู้โทร สรุปสั้นๆ' },
-      callback_number: { type: 'STRING', description: 'เบอร์ติดต่อกลับที่ผู้โทรให้ ถ้าไม่ให้ใส่ "-"' },
+      callback_number: {
+        type: 'STRING',
+        description: 'เบอร์ติดต่อกลับ ถ้าผู้โทรบอกว่า "เบอร์นี้" ให้ใส่เบอร์ที่โทรเข้า ถ้าไม่ให้เลยใส่ "-"',
+      },
       verdict: {
         type: 'STRING',
         enum: ['scam', 'suspicious', 'legit'],
