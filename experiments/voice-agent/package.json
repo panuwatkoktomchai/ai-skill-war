@@ -4,9 +4,11 @@
   "type": "module",
   "scripts": {
     "start": "node --env-file=.env server.mjs",
-    "eval": "node --env-file=.env eval/run-eval.mjs"
+    "eval": "node --env-file=.env eval/run-eval.mjs",
+    "phone": "node --env-file=.env phone/server.mjs"
   },
   "dependencies": {
-    "@google/genai": "^3.6.1"
+    "@google/genai": "^3.6.1",
+    "ws": "^8.23.0"
   }
 }
