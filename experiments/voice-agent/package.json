@@ -1,0 +1,11 @@
+{
+  "name": "voice-agent-spike",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file=.env server.mjs"
+  },
+  "dependencies": {
+    "@google/genai": "^3.6.1"
+  }
+}

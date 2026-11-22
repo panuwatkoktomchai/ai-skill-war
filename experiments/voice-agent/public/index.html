@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>หลานAI · ทดลองรับสายแทน</title>
+<script type="importmap">
+{ "imports": { "@google/genai": "https://esm.sh/@google/genai@3.6.1?target=es2022" } }
+</script>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<main>
+  <h1>หลานAI · ทดลองให้ AI รับสายแทนคุณแดง</h1>
+  <p class="hint">กด "รับสาย" แล้วเล่นเป็นคนโทรเข้า AI จะเปิดสายก่อน ลองอ่านบทด้านล่าง หรือพูดเองก็ได้ ฟังด้วยหูฟังจะดีที่สุด เสียง AI จะไม่ย้อนเข้าไมค์</p>
+
+  <section class="controls">
+    <button id="call-btn" type="button">รับสาย (เริ่มทดสอบ)</button>
+    <label><input id="phone-mode" type="checkbox" checked> จำลองเสียงสายโทรศัพท์ (8 kHz)</label>
+  </section>
+
+  <section class="meters">
+    <span>สถานะ: <b id="status">ยังไม่ได้ต่อสาย</b></span>
+    <span>ไมค์ <meter id="level" min="0" max="1" value="0"></meter></span>
+    <span>เวลาตอบ (ผู้โทรหยุดพูด → AI เริ่มพูด): <b id="latency">-</b></span>
+  </section>
+
+  <section class="cols">
+    <div>
+      <h2>บทสนทนา</h2>
+      <div id="transcript" class="transcript" aria-live="polite"></div>
+    </div>
+    <div>
+      <h2>ผลที่ส่งเข้า LINE</h2>
+      <div id="report" class="report" hidden></div>
+      <h2>บทให้คนทดสอบอ่าน</h2>
+      <ol id="scripts" class="scripts"></ol>
+    </div>
+  </section>
+</main>
+<script type="module" src="/app.js"></script>
+</body>
+</html>
