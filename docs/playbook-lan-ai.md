@@ -114,7 +114,7 @@
 4. **ต้องมีคนดูแลแต่ไม่มีใครดูแล เกือบ 1 ล้านคน** · NHES 7
 5. **บ้านบางแครับได้ 250 คน มีคนรอคิวมากกว่า 6,000 คน** · กทม. มีผู้สูงอายุ 1.27 ล้านคน
 
-รายละเอียดและแหล่งที่มา: `docs/research/elderly-bangkok-data.md` (อยู่ใน repo apgame29/ai-skill-war ยังไม่ได้ย้ายมา repo นี้)
+รายละเอียดและแหล่งที่มา: `docs/research/elderly-bangkok-data.md` (branch `apgame/research-docs`)
 
 ---
 
