@@ -242,10 +242,32 @@ ui.callBtn.addEventListener('click', async () => {
   }
 });
 
+// แสดงบททดสอบ · กดที่บทเพื่อใส่เบอร์ผู้โทรของบทนั้นให้อัตโนมัติ
+const EXPECTED_LABEL = { end: 'ควรได้: จบสาย แจ้ง LINE', transfer: 'ควรได้: โอนสายให้ยาย' };
+let lastGroup = '';
 for (const s of TEST_SCRIPTS) {
+  if (s.group !== lastGroup) {
+    const h = document.createElement('li');
+    h.className = 'group';
+    h.textContent = s.group;
+    ui.scripts.append(h);
+    lastGroup = s.group;
+  }
   const li = document.createElement('li');
-  li.innerHTML = '<b></b><span></span>';
+  li.className = 'script';
+  li.innerHTML = '<b></b><div class="meta"></div>';
   li.querySelector('b').textContent = s.title;
-  li.querySelector('span').textContent = s.lines;
+  li.querySelector('.meta').textContent = `เบอร์ ${s.callerNumber} · ${EXPECTED_LABEL[s.expected]}`;
+  for (const line of s.lines) {
+    const p = document.createElement('p');
+    p.textContent = line;
+    li.append(p);
+  }
+  li.addEventListener('click', () => {
+    if (call) return; // ระหว่างคุยห้ามเปลี่ยนเบอร์
+    ui.callerNumber.value = s.callerNumber;
+    document.querySelectorAll('.script.picked').forEach((x) => x.classList.remove('picked'));
+    li.classList.add('picked');
+  });
   ui.scripts.append(li);
 }

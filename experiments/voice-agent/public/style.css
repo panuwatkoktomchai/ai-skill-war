@@ -27,6 +27,10 @@ input[type="tel"] { font: inherit; padding: 4px 8px; border: 1px solid var(--bor
 .why td { border-top: 1px solid var(--border); padding: 4px 6px; vertical-align: top; }
 .why .w { font-weight: 600; white-space: nowrap; }
 .why .e { color: var(--muted); }
-.scripts { padding-left: 20px; font-size: 14px; }
-.scripts li { margin-bottom: 8px; }
+.scripts { list-style: none; padding: 0; font-size: 14px; }
+.scripts .group { font-weight: 600; margin: 14px 0 6px; color: var(--muted); }
+.scripts .script { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; }
+.scripts .script.picked { border-color: var(--line); box-shadow: 0 0 0 2px var(--line) inset; }
+.scripts .script p { margin: 4px 0 0; padding-left: 8px; border-left: 3px solid var(--border); }
+.scripts .meta { color: var(--muted); font-size: 13px; }
 .scripts b { display: block; }
