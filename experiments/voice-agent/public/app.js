@@ -4,9 +4,10 @@ import {
   REPORT_CALL_TOOL,
   TEST_SCRIPTS,
   VOICE_NAME,
+  buildFamilyMessage,
   buildSystemInstruction,
-  decideCallAction,
 } from '/agent-config.js';
+import { scoreCall } from '/risk.js';
 
 const PHONE_RATE = 8000;
 const WIDEBAND_RATE = 16000;
@@ -67,31 +68,42 @@ const VERDICT_LABEL = {
 };
 
 // การ์ดผลแต่ละครั้งที่ AI เรียก report_call · ใบใหม่อยู่บนสุด ไม่ทับใบเก่า
-function renderReport(r, callerNumber) {
-  const v = VERDICT_LABEL[r.verdict] ?? VERDICT_LABEL.suspicious;
+// แสดงที่มาของคะแนนทีละสัญญาณ (น้ำหนัก + คำพูดที่เป็นหลักฐาน) ให้อธิบายกรรมการได้
+function renderReport(r, result, callerNumber) {
+  const v = VERDICT_LABEL[result.verdict];
   const card = document.createElement('article');
   card.className = `report ${v.cls}`;
   card.innerHTML = `
     <div class="line-head">LINE ถึงคุณแดงและลูกหลาน · <span class="f-time"></span></div>
     <p class="line-msg"></p>
     <dl>
-      <dt>ผลประเมิน</dt><dd>${v.text} · ความเสี่ยง ${Number(r.scam_risk) || 0}/100</dd>
+      <dt>ผลประเมิน</dt><dd>${v.text} · คะแนนเสี่ยง ${result.score}/100</dd>
       <dt>เบอร์ที่โทรเข้า</dt><dd class="f-in"></dd>
       <dt>ผู้โทร</dt><dd class="f-name"></dd>
       <dt>อ้างว่าเป็น</dt><dd class="f-org"></dd>
       <dt>ธุระ</dt><dd class="f-purpose"></dd>
       <dt>เบอร์กลับ</dt><dd class="f-cb"></dd>
-      <dt>สัญญาณอันตราย</dt><dd class="f-flags"></dd>
-    </dl>`;
+    </dl>
+    <table class="why"><caption>คะแนนมาจากไหน</caption><tbody></tbody></table>`;
   const set = (cls, text) => (card.querySelector(cls).textContent = text);
   set('.f-time', new Date().toLocaleTimeString('th-TH'));
-  set('.line-msg', r.message_to_family ?? '');
+  set('.line-msg', buildFamilyMessage(r, result));
   set('.f-in', callerNumber || '-');
   set('.f-name', r.caller_name ?? '-');
   set('.f-org', r.claimed_organization ?? '-');
   set('.f-purpose', r.purpose ?? '-');
   set('.f-cb', r.callback_number ?? '-');
-  set('.f-flags', (r.red_flags ?? []).join(' · ') || '-');
+
+  const tbody = card.querySelector('.why tbody');
+  if (result.reasons.length === 0) tbody.innerHTML = '<tr><td>ไม่พบสัญญาณใด</td></tr>';
+  for (const reason of result.reasons) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td class="w"></td><td><div class="l"></div><div class="e"></div></td>';
+    tr.querySelector('.w').textContent = reason.weight > 0 ? `+${reason.weight}` : `${reason.weight}`;
+    tr.querySelector('.l').textContent = reason.label;
+    tr.querySelector('.e').textContent = reason.evidence ? `"${reason.evidence}"` : '';
+    tbody.append(tr);
+  }
   ui.reports.prepend(card);
 }
 
@@ -112,11 +124,11 @@ function handleToolCall(session, toolCall) {
     let response = { result: 'ok' };
     if (fc.name === REPORT_CALL_TOOL.name) {
       const report = fc.args ?? {};
-      const action = decideCallAction(report);
-      renderReport(report, call?.callerNumber);
-      if (action === 'transfer') showTransfer(report);
-      response = { action };
-      console.log('report_call', action, report);
+      const result = scoreCall(report.signals, report.evidence, call?.callerNumber);
+      renderReport(report, result, call?.callerNumber);
+      if (result.action === 'transfer') showTransfer(report);
+      response = { action: result.action };
+      console.log('report_call', result, report);
     }
     responses.push({ id: fc.id, name: fc.name, response });
   }

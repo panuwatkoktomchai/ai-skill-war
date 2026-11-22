@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node --env-file=.env server.mjs"
+    "start": "node --env-file=.env server.mjs",
+    "eval": "node --env-file=.env eval/run-eval.mjs"
   },
   "dependencies": {
     "@google/genai": "^3.6.1"
