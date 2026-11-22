@@ -1,0 +1,340 @@
+<title>Kiro กับ AI-DLC</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: แผนที่ 4 ชั้น — ภาพรวม 3 ชิ้น → ของที่ติดตั้งอยู่ไหน → เส้นทางงาน (คลิกดูทีละขั้น) → 4 ฟีเจอร์ Kiro → เช็กลิสต์วันแข่ง */
+:root{
+  --bg:#F3F4F1; --surface:#FFFFFF; --ink:#18202A; --muted:#5B6570; --line:#D9DDD6;
+  --ai:#0F7B6C; --ai-soft:#DDF0EC;        /* สิ่งที่ AI ทำ */
+  --you:#B5550B; --you-soft:#FBE9D9;      /* สิ่งที่คุณทำ / ด่านอนุมัติ */
+  --tool:#3A4A8C; --tool-soft:#E3E7F6;    /* เครื่องมือ / ไฟล์ */
+  --f-display:"Anuphan","IBM Plex Sans Thai",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans Thai",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161B; --surface:#1B2128; --ink:#E8ECEF; --muted:#9AA4AE; --line:#2C343D;
+  --ai:#4CC3AF; --ai-soft:#173A35; --you:#F0A35E; --you-soft:#3D2A18; --tool:#9FB0F0; --tool-soft:#232B4A; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161B; --surface:#1B2128; --ink:#E8ECEF; --muted:#9AA4AE; --line:#2C343D;
+  --ai:#4CC3AF; --ai-soft:#173A35; --you:#F0A35E; --you-soft:#3D2A18; --tool:#9FB0F0; --tool-soft:#232B4A; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.65;margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.3}
+h1{font-size:clamp(28px,4vw,40px);font-weight:700}
+h2{font-size:22px;font-weight:700}
+h3{font-size:17px;font-weight:600}
+p{margin:0}
+code,.mono{font-family:var(--f-mono);font-size:.88em}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.lede{color:var(--muted);max-width:62ch}
+section{display:flex;flex-direction:column;gap:18px}
+.sec-head{display:flex;flex-direction:column;gap:6px}
+
+/* legend */
+.legend{display:flex;flex-wrap:wrap;gap:10px 18px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+
+/* 1. three pieces */
+.pieces{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:stretch}
+.piece{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.piece .tag{align-self:flex-start;font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px}
+.piece .like{font-size:13px;color:var(--muted)}
+.t-tool{background:var(--tool-soft);color:var(--tool)}
+.t-ai{background:var(--ai-soft);color:var(--ai)}
+.t-you{background:var(--you-soft);color:var(--you)}
+.equation{font-family:var(--f-display);font-size:17px;font-weight:600;text-align:center;padding:14px;border:1px dashed var(--line);border-radius:12px}
+
+/* 2. install map */
+.map{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) minmax(0,1fr);gap:14px}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.box h3{display:flex;align-items:center;gap:8px}
+.file{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;font-size:13.5px;padding:8px 10px;border-radius:8px;background:var(--bg)}
+.file code{color:var(--tool);font-weight:500;white-space:nowrap}
+.file span{color:var(--muted)}
+.check{font-size:12px;color:var(--ai);font-weight:600}
+
+/* 3. journey */
+.track{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0;position:relative;overflow-x:auto;padding-bottom:4px}
+.step{appearance:none;border:0;background:none;color:inherit;font:inherit;cursor:pointer;text-align:left;padding:0 6px 0 0;display:flex;flex-direction:column;gap:8px;min-width:120px}
+.step .rail{display:flex;align-items:center;gap:0}
+.step .node{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:14px;background:var(--surface);border:2px solid var(--line);color:var(--muted);transition:all .15s}
+.step .bar{height:2px;flex:1;background:var(--line)}
+.step .gate{width:12px;height:12px;transform:rotate(45deg);background:var(--you);flex:none;margin:0 2px}
+.step:last-child .bar{background:transparent}
+.step .lbl{font-family:var(--f-display);font-weight:600;font-size:14.5px;line-height:1.35}
+.step .sub{font-size:12.5px;color:var(--muted);line-height:1.4}
+.step[aria-selected="true"] .node{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.step:focus-visible{outline:2px solid var(--tool);outline-offset:4px;border-radius:8px}
+.step:hover .node{border-color:var(--ink);color:var(--ink)}
+.step[aria-selected="true"]:hover .node{color:var(--bg)}
+
+.detail{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 22px}
+.detail .full{grid-column:1/-1}
+.lane{border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.lane.ai{background:var(--ai-soft)} .lane.you{background:var(--you-soft)} .lane.out{background:var(--tool-soft)}
+.lane .who{font-size:12px;font-weight:600;letter-spacing:.04em}
+.lane.ai .who{color:var(--ai)} .lane.you .who{color:var(--you)} .lane.out .who{color:var(--tool)}
+.example{border-left:3px solid var(--you);padding:6px 0 6px 12px;font-size:14px}
+.example b{font-weight:600}
+.phase-note{font-size:13px;color:var(--muted)}
+
+/* 4. features */
+.feats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.feat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.feat .q{font-size:13px;color:var(--muted)}
+.feat .where{margin-top:auto;font-size:12.5px;color:var(--tool)}
+
+/* 5. checklist */
+.cols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.col{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;min-width:0}
+.col ol{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap:6px;font-size:14px}
+.cmd{display:block;background:var(--bg);border-radius:8px;padding:10px 12px;font-family:var(--f-mono);font-size:12.5px;overflow-x:auto;white-space:pre;margin-top:8px}
+.warn{background:var(--you-soft);border-radius:12px;padding:14px 16px;font-size:14px}
+.warn b{color:var(--you)}
+
+@media (max-width:860px){
+  .pieces,.map,.cols{grid-template-columns:minmax(0,1fr)}
+  .feats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .detail{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:620px){
+  .track{grid-template-columns:minmax(0,1fr);gap:4px;overflow:visible}
+  .step{flex-direction:row;align-items:center;gap:12px;padding:6px 0;min-width:0}
+  .step .rail .bar,.step .rail .gate{display:none}
+  .step .txt{display:flex;flex-direction:column}
+  .feats{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="sec-head">
+  <span class="eyebrow">AI Skill Wars · ทีม apgame · 20 พ.ย. 2569</span>
+  <h1>Kiro กับ AI-DLC ทำงานยังไง</h1>
+  <p class="lede">อ่านจากบนลงล่าง: มีของ 3 ชิ้น ติดตั้งไว้ที่ไหน งานเดินทีละขั้นยังไง และวันแข่งต้องทำอะไร</p>
+  <div class="legend" aria-label="ความหมายของสี">
+    <span><i class="dot" style="background:var(--ai)"></i>AI ทำ</span>
+    <span><i class="dot" style="background:var(--you)"></i>คุณทำ / ด่านอนุมัติ</span>
+    <span><i class="dot" style="background:var(--tool)"></i>เครื่องมือและไฟล์</span>
+  </div>
+</header>
+
+<!-- 1 -->
+<section>
+  <div class="sec-head">
+    <h2>ของ 3 ชิ้นที่ต้องรู้จัก</h2>
+    <p class="lede">สองชิ้นแรกเป็นของหลัก ชิ้นที่สามเป็นแค่ตัวช่วยติดตั้ง</p>
+  </div>
+  <div class="pieces">
+    <div class="piece">
+      <span class="tag t-tool">โปรแกรม</span>
+      <h3>Kiro</h3>
+      <p>โปรแกรมเขียนโค้ดของ AWS ที่มี AI อยู่ในตัว คุยกับ AI ในช่องแชต แล้ว AI แก้ไฟล์ในโปรเจกต์ให้</p>
+      <p class="like">เหมือน Cursor หรือ Claude Code · มีในเครื่องอยู่แล้ว เวอร์ชัน 1.4.236</p>
+    </div>
+    <div class="piece">
+      <span class="tag t-ai">วิธีทำงาน</span>
+      <h3>AI-DLC</h3>
+      <p>ชุดกติกาจาก AWS ที่บังคับให้ AI ทำงานเป็นขั้น ถามก่อน เขียนเอกสารก่อน แล้วหยุดรอคุณอนุมัติทุกขั้น ก่อนจะเขียนโค้ด</p>
+      <p class="like">เหมือน Scrum ที่ AI เป็นคนขับ · เรียกใช้ด้วย <code>/aidlc</code></p>
+    </div>
+    <div class="piece">
+      <span class="tag t-tool">ตัวติดตั้ง</span>
+      <h3>aidlc (คำสั่งใน terminal)</h3>
+      <p>โปรแกรมเล็กที่เอากติกา AI-DLC ไปใส่ในโปรเจกต์ และตรวจว่าระบบพร้อมใช้ ใช้ตอนติดตั้งเป็นหลัก</p>
+      <p class="like">ลงไว้ที่ <code>~/.local/bin/aidlc</code> · เวอร์ชัน 2.11.4</p>
+    </div>
+  </div>
+  <p class="equation">Kiro (โปรแกรม) + AI-DLC (กติกา) = AI ที่ทำงานเป็นขั้นตอน และรอคุณเซ็นอนุมัติทุกขั้น</p>
+</section>
+
+<!-- 2 -->
+<section>
+  <div class="sec-head">
+    <h2>ผมติดตั้งอะไรไว้ตรงไหน</h2>
+    <p class="lede">ของในเครื่องคุณ ของในโฟลเดอร์โปรเจกต์ และของที่ส่งขึ้น GitLab ให้โอ้</p>
+  </div>
+  <div class="map">
+    <div class="box">
+      <h3><span class="tag t-tool" style="font-size:12px;padding:2px 8px;border-radius:999px">1</span>ในเครื่อง Mac</h3>
+      <div class="file"><code>Kiro.app</code><span>มีอยู่แล้ว ไม่ได้ลงใหม่</span></div>
+      <div class="file"><code>~/.local/bin/aidlc</code><span>ตัวติดตั้งและตรวจระบบ ลงจาก release ทางการของ awslabs ตรวจ sha256 แล้ว</span></div>
+      <span class="check">✓ ไม่ได้ใช้สิทธิ์ admin</span>
+    </div>
+    <div class="box">
+      <h3><span class="tag t-tool" style="font-size:12px;padding:2px 8px;border-radius:999px">2</span>ในโปรเจกต์ AI Skill Wars</h3>
+      <div class="file"><code>.kiro/</code><span>คู่มือและเครื่องมือที่สอน AI ของ Kiro ให้เดินตามขั้นตอน AI-DLC (agents, hooks, steering)</span></div>
+      <div class="file"><code>aidlc/</code><span>ที่เก็บเอกสารที่ AI เขียนระหว่างงาน: requirement, user story, เหตุผลที่ตัดสินใจ</span></div>
+      <div class="file"><code>AGENTS.md</code><span>ป้ายบอก AI ว่าโปรเจกต์นี้ใช้ AI-DLC</span></div>
+      <div class="file"><code>docs/</code><span>รีเสิร์ชเพน · ไอเดียผู้สูงอายุ · สรุป Kiro ที่เราเขียนกันเอง</span></div>
+    </div>
+    <div class="box">
+      <h3><span class="tag t-tool" style="font-size:12px;padding:2px 8px;border-radius:999px">3</span>บน GitLab</h3>
+      <div class="file"><code>apgame/ai-skill-war</code><span>push ทั้งหมดขึ้นแล้ว commit ล่าสุด <code>0dd3627</code></span></div>
+      <p style="font-size:13.5px;color:var(--muted)">โอ้ pull ไปได้เลย แต่ต้องลงตัว <code>aidlc</code> ในเครื่องตัวเองก่อน ไฟล์ใน repo ถึงจะทำงาน</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section>
+  <div class="sec-head">
+    <h2>พอพิมพ์ /aidlc แล้วเกิดอะไรขึ้น</h2>
+    <p class="lede">กดแต่ละขั้นเพื่อดูว่า AI ทำอะไร คุณทำอะไร และได้ไฟล์อะไร ตัวอย่างใช้ไอเดียผู้สูงอายุอยู่คนเดียว ◆ สีส้มคือด่านที่ AI หยุดรอคุณอนุมัติ</p>
+  </div>
+  <div class="track" role="tablist" aria-label="ขั้นตอน AI-DLC" id="track"></div>
+  <div class="detail" id="detail" role="tabpanel" aria-live="polite"></div>
+</section>
+
+<!-- 4 -->
+<section>
+  <div class="sec-head">
+    <h2>4 ฟีเจอร์ของ Kiro ที่วิทยากรพูดถึง</h2>
+    <p class="lede">ฟีเจอร์ทั้ง 4 ตัวนี้มีใน Kiro อยู่แล้ว ไม่ต้องใช้ AI-DLC ก็ใช้ได้ ส่วน AI-DLC ก็สร้างอยู่บนฟีเจอร์พวกนี้</p>
+  </div>
+  <div class="feats">
+    <div class="feat">
+      <span class="tag t-ai" style="align-self:flex-start;font-size:12px;padding:2px 10px;border-radius:999px">วางแผนก่อน</span>
+      <h3>Specs</h3>
+      <p class="q">ตอบคำถาม: จะสร้างอะไร</p>
+      <p>ให้ AI เขียนแผนเป็น 3 ไฟล์ก่อนแล้วค่อยเขียนโค้ด ได้แก่ requirement → design → รายการงานย่อย</p>
+      <p style="font-size:13px">requirement เขียนเป็นประโยค <code>WHEN … THE SYSTEM SHALL …</code> (เรียกว่า EARS)</p>
+      <span class="where mono">.kiro/specs/</span>
+    </div>
+    <div class="feat">
+      <span class="tag t-tool" style="align-self:flex-start;font-size:12px;padding:2px 10px;border-radius:999px">ความจำถาวร</span>
+      <h3>Steering</h3>
+      <p class="q">ตอบคำถาม: AI ต้องรู้อะไรเกี่ยวกับโปรเจกต์ทุกครั้ง</p>
+      <p>ไฟล์ที่ AI อ่านทุกรอบ เช่น สินค้าคืออะไร ใช้ stack อะไร โครงโฟลเดอร์เป็นยังไง เหมือน CLAUDE.md ของ woowey</p>
+      <span class="where mono">.kiro/steering/ product · tech · structure</span>
+    </div>
+    <div class="feat">
+      <span class="tag t-ai" style="align-self:flex-start;font-size:12px;padding:2px 10px;border-radius:999px">อัตโนมัติ</span>
+      <h3>Hooks</h3>
+      <p class="q">ตอบคำถาม: เกิดเหตุการณ์นี้แล้วให้ทำอะไรเอง</p>
+      <p>เช่น พอ save ไฟล์ให้รัน lint เอง หรือพอ AI ทำงานเสร็จให้รันเทสต์ AI-DLC ใช้ hook บันทึกทุกการตัดสินใจ</p>
+      <span class="where mono">.kiro/hooks/</span>
+    </div>
+    <div class="feat">
+      <span class="tag t-tool" style="align-self:flex-start;font-size:12px;padding:2px 10px;border-radius:999px">ปลั๊กอิน</span>
+      <h3>Powers</h3>
+      <p class="q">ตอบคำถาม: AI ต้องใช้บริการภายนอกตัวไหน</p>
+      <p>แพ็กความรู้และเครื่องมือของแต่ละบริการ เช่น Stripe, Supabase, Figma โหลดเฉพาะตอนที่เรื่องที่คุยเกี่ยวข้อง context จะได้ไม่บวม</p>
+      <span class="where mono">แผง Powers ใน Kiro · kiro.dev/powers</span>
+    </div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section>
+  <div class="sec-head">
+    <h2>ใช้จริงต้องทำอะไร</h2>
+  </div>
+  <div class="cols">
+    <div class="col">
+      <h3>ทุกครั้งที่เปิด Kiro</h3>
+      <ol>
+        <li>ปิด Kiro ให้หมดทุกหน้าต่าง (Cmd+Q)</li>
+        <li>เปิดใหม่จาก terminal ด้วยคำสั่งข้างล่าง ถ้าเปิดจาก Dock ระบบอัตโนมัติของ AI-DLC จะไม่ทำงาน</li>
+        <li>ในช่องแชต เลือก agent ชื่อ <b>aidlc</b></li>
+      </ol>
+      <span class="cmd">/Applications/Kiro.app/Contents/Resources/app/bin/code \
+  "/Users/apgame/Projects/AI Skill Wars"</span>
+    </div>
+    <div class="col">
+      <h3>ทดลองวันนี้</h3>
+      <ol>
+        <li>พิมพ์ <code>/aidlc --doctor</code> เพื่อเช็กว่าระบบพร้อม</li>
+        <li>ลองสั่งโจทย์สั้นๆ แล้วตอบคำถามที่ AI ถาม</li>
+        <li>ดูว่ารอบเดียวใช้เครดิตไปเท่าไหร่ แผนฟรีมี 50 เครดิตต่อเดือน</li>
+      </ol>
+      <span class="cmd">/aidlc ระบบเพื่อน AI ทักผู้สูงอายุ
+ที่อยู่คนเดียวทุกเช้าผ่าน LINE</span>
+    </div>
+    <div class="col">
+      <h3>วันแข่ง 30 พ.ย.</h3>
+      <ol>
+        <li>บอก AI ว่าเป็นงาน <b>POC</b> มันจะข้ามขั้นที่ไม่จำเป็น ถ้าเดินครบทุกขั้นวันเดียวไม่จบ</li>
+        <li>ใช้ขั้น Inception ไม่เกิน 1 ชม. นั่ง 3 คนช่วยกันตรวจที่ AI เขียน (Mob Elaboration)</li>
+        <li>ถ้าแชตใกล้เต็ม ให้ <code>/aidlc park</code> แล้วเปิดแชตใหม่ <code>/aidlc --resume</code></li>
+        <li>ตอน pitch เอาไฟล์ใน <code>aidlc/</code> ไปโชว์ได้ว่าเราทำงานเป็นระบบ</li>
+      </ol>
+    </div>
+  </div>
+  <p class="warn"><b>ยังไม่ชัด ต้องถามวิทยากร:</b> วันแข่งบังคับใช้ Kiro หรือ AI-DLC ไหม · ผู้จัดแจกเครดิต Kiro หรือ AWS ไหม · ต้องใช้บริการ AWS ตัวไหนเป็นข้อบังคับ</p>
+</section>
+
+</div>
+
+<script>
+const STEPS = [
+  { n:"1", lbl:"สั่งงาน", sub:"พิมพ์โจทย์", gate:false, phase:"เริ่มต้น",
+    ai:"สร้างพื้นที่งานในโฟลเดอร์ aidlc/ แล้วอ่านโปรเจกต์ว่ามีโค้ดอยู่แล้วหรือเริ่มจากศูนย์ ขั้นนี้ AI ทำเองทั้งหมด ไม่ต้องรออนุมัติ",
+    you:"เลือก agent aidlc แล้วพิมพ์ /aidlc ตามด้วยโจทย์ เป็นภาษาไทยหรืออังกฤษก็ได้",
+    out:"aidlc/aidlc-state.md (บอกว่าตอนนี้ถึงขั้นไหน)",
+    ex:"/aidlc ระบบเพื่อน AI ทักผู้สูงอายุที่อยู่คนเดียวทุกเช้าผ่าน LINE ถ้าไม่ตอบหรือผิดปกติให้แจ้งลูกหลาน" },
+  { n:"2", lbl:"เคลียร์โจทย์", sub:"Ideation", gate:true, phase:"Phase 1 Ideation · ถ้าเลือก POC จะทำแค่ข้อนี้ข้อเดียว",
+    ai:"สรุปว่าเราจะแก้ปัญหาอะไร ให้ใคร ขอบเขตแค่ไหน แล้วตั้งคำถามข้อที่ยังไม่ชัด",
+    you:"ตอบคำถาม แก้ขอบเขตถ้า AI เข้าใจผิด แล้วกดอนุมัติ",
+    out:"เอกสาร intent (ความตั้งใจของงาน)",
+    ex:"AI ถามว่า: ผู้ใช้หลักคือผู้สูงอายุหรือลูกหลาน? ฉุกเฉินแจ้งใครก่อน ลูกหลานหรือ 1669? ต้องรองรับคนที่ไม่มีสมาร์ตโฟนไหม?" },
+  { n:"3", lbl:"เขียนความต้องการ", sub:"Inception", gate:true, phase:"Phase 2 Inception · ทั้งทีมนั่งตรวจด้วยกัน = Mob Elaboration",
+    ai:"เขียน requirement, user story และ persona แล้วแตกงานเป็นก้อนย่อย (Unit of Work) เรียงว่าต้องทำก้อนไหนก่อน",
+    you:"3 คนนั่งอ่านพร้อมกัน ตัดของที่ไม่ทันวันแข่ง แก้ story ที่ผิด แล้วอนุมัติ",
+    out:"requirements.md · stories.md · personas.md · unit-of-work.md",
+    ex:"Story: ในฐานะลูกที่ทำงานต่างจังหวัด ฉันอยากรู้ภายใน 30 นาทีถ้าแม่ไม่ตอบข้อความตอนเช้า เพื่อจะได้โทรหาหรือขอให้เพื่อนบ้านไปดู" },
+  { n:"4", lbl:"ออกแบบ", sub:"Construction", gate:true, phase:"Phase 3 Construction · ช่วงออกแบบ ทำแยกทีละก้อนงาน",
+    ai:"เสนอโครงระบบ เช่น ส่วนไหนอยู่บน LINE ใช้ AI ตัวไหนฟังเสียง เก็บข้อมูลที่ไหน และให้เหตุผลประกอบ",
+    you:"ช่วยกันตัดสินเรื่องเทคนิค (Mob Construction) เช่นจะใช้ AWS Bedrock หรือไม่ แล้วอนุมัติ",
+    out:"components.md · decisions.md (บันทึกว่าเลือกอะไร เพราะอะไร)",
+    ex:"LINE OA รับเสียง → AI ถอดเสียงและประเมินความเสี่ยง → แบ่งเป็น 3 ระดับ (ปกติ / น่าห่วง / ฉุกเฉิน) → ส่งแจ้งเตือนตามระดับ" },
+  { n:"5", lbl:"เขียนโค้ด", sub:"Construction", gate:true, phase:"Phase 3 Construction · Code Generation ทำทีละก้อนงาน",
+    ai:"เขียนโค้ดทีละก้อนตามแผนที่อนุมัติแล้ว ไม่เขียนออกนอกแผน",
+    you:"ดูผลแต่ละก้อน ลองรัน ถ้าต้องการปรับให้สั่งแก้ แล้วอนุมัติก่อนไปก้อนถัดไป",
+    out:"โค้ดในโปรเจกต์ + บันทึกใน aidlc/audit/",
+    ex:"ก้อนที่ 1: webhook รับข้อความจาก LINE · ก้อนที่ 2: AI ประเมินความเสี่ยง · ก้อนที่ 3: ส่งแจ้งเตือนลูกหลาน" },
+  { n:"6", lbl:"เทสต์", sub:"Build & Test", gate:true, phase:"Phase 3 · Build and Test ทำครั้งเดียวตอนจบ · Phase 4 (ขึ้นระบบจริง) ข้ามได้ใน POC",
+    ai:"build และรันเทสต์ทั้งระบบ แล้วรายงานว่าอะไรผ่าน อะไรพัง",
+    you:"ลอง demo ตั้งแต่ต้นจนจบตามที่จะโชว์กรรมการ แล้วอัดวิดีโอสำรองไว้",
+    out:"ผลเทสต์ + โค้ดที่พร้อม demo",
+    ex:"จำลองว่าคุณยายไม่ตอบ 30 นาที แล้วดูว่าแจ้งเตือนเด้งเข้า LINE ของลูกจริง" }
+];
+
+const track = document.getElementById('track');
+const detail = document.getElementById('detail');
+
+function esc(s){return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+STEPS.forEach((s,i)=>{
+  const b = document.createElement('button');
+  b.className='step'; b.type='button'; b.id='step-'+i;
+  b.setAttribute('role','tab'); b.setAttribute('aria-controls','detail');
+  b.innerHTML = `<span class="rail"><span class="node">${s.n}</span><span class="bar"></span>${s.gate?'<span class="gate" title="ด่านอนุมัติ"></span>':''}<span class="bar"></span></span>
+    <span class="txt"><span class="lbl">${esc(s.lbl)}</span><span class="sub">${esc(s.sub)}${s.gate?' · รออนุมัติ':''}</span></span>`;
+  b.addEventListener('click',()=>select(i));
+  b.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key==='ArrowDown'){e.preventDefault();select(Math.min(i+1,STEPS.length-1),true)}
+    if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();select(Math.max(i-1,0),true)}
+  });
+  track.appendChild(b);
+});
+
+function select(i,focus){
+  const s=STEPS[i];
+  [...track.children].forEach((el,j)=>{el.setAttribute('aria-selected',j===i?'true':'false');el.tabIndex=j===i?0:-1});
+  if(focus) track.children[i].focus();
+  detail.innerHTML = `
+    <div class="full"><span class="eyebrow">ขั้นที่ ${s.n} · ${esc(s.phase)}</span><h3 style="margin-top:4px;font-size:20px">${esc(s.lbl)}</h3></div>
+    <div class="lane ai"><span class="who">AI ทำ</span><p>${esc(s.ai)}</p></div>
+    <div class="lane you"><span class="who">คุณทำ${s.gate?' · ด่านอนุมัติ ◆':''}</span><p>${esc(s.you)}</p></div>
+    <div class="lane out full"><span class="who">ไฟล์ที่ได้</span><p class="mono">${esc(s.out)}</p></div>
+    <div class="full example"><b>ตัวอย่างจากไอเดียเรา:</b> ${esc(s.ex)}</div>`;
+}
+select(0);
+</script>
