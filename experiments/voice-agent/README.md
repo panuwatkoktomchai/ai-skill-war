@@ -23,12 +23,14 @@ npm start               # เปิด http://localhost:5180 ด้วย Chrome
 
 | ไฟล์ | หน้าที่ |
 |---|---|
-| `server.mjs` | เสิร์ฟหน้าเว็บ และออก ephemeral token (ใช้ครั้งเดียว อายุ 30 นาที) ให้เบราว์เซอร์ · API key จริงอยู่แค่ฝั่งเซิร์ฟเวอร์ |
+| `server.mjs` | เสิร์ฟหน้าเว็บ และออก ephemeral token (ใช้ครั้งเดียว อายุ 30 นาที) ให้เบราว์เซอร์ · API key จริงอยู่แค่ฝั่งเซิร์ฟเวอร์ · `POST /api/notify` ส่ง LINE หลัง AI สรุปสาย (คิดคะแนนใหม่ฝั่งเซิร์ฟเวอร์) |
+| `phone/line.mjs` | ข้อความ LINE + broadcast · ใช้ร่วมกันทั้งหน้าเว็บและทางเบอร์จริง |
 | `public/agent-config.js` | **prompt + function `report_call` + บทให้คนทดสอบอ่าน** · ถ้าจะจูน AI ให้แก้ไฟล์นี้ |
 | `public/app.js` | ต่อ Gemini Live, จัดการข้อความถอดเสียง, แสดงการ์ดผล |
 | `public/audio.js` | อัดไมค์ → PCM16 (16 kHz หรือ 8 kHz) · เล่นเสียง PCM16 24 kHz · หยุดเสียงเมื่อผู้โทรพูดแทรก |
 
 - model ตั้งต้นคือ `gemini-3.8-live` · เปลี่ยนได้ด้วย `GEMINI_LIVE_MODEL` ใน `.env`
+- **เดโมแทนเบอร์จริง:** ใส่ `LINE_CHANNEL_ACCESS_TOKEN` ใน `.env` แล้ว `npm start` · พอ AI สรุปสาย หน้าเว็บจะส่ง LINE จริงเข้ามือถือ (broadcast ถึงเพื่อนทุกคนของ OA ใช้ OA สำหรับเดโมเท่านั้น) · ไม่ใส่ token = แสดงการ์ดบนจออย่างเดียว การ์ดบอกสถานะการส่งทุกครั้ง
 - SDK `@google/genai` 3.6.1 · ฝั่งเบราว์เซอร์โหลดจาก esm.sh (pin version ไว้ใน `index.html`)
 
 ## จดผลทดสอบ

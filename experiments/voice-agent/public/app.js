@@ -81,7 +81,7 @@ function renderReport(r, result, callerNumber) {
   const card = document.createElement('article');
   card.className = `report ${v.cls}`;
   card.innerHTML = `
-    <div class="line-head">LINE ถึงคุณแดงและลูกหลาน · <span class="f-time"></span></div>
+    <div class="line-head">LINE ถึงคุณแดงและลูกหลาน · <span class="f-time"></span> · <span class="f-sent">กำลังส่ง LINE...</span></div>
     <p class="line-msg"></p>
     <dl>
       <dt>ผลประเมิน</dt><dd>${v.text} · คะแนนเสี่ยง ${result.score}/100</dd>
@@ -112,6 +112,33 @@ function renderReport(r, result, callerNumber) {
     tbody.append(tr);
   }
   ui.reports.prepend(card);
+  return card;
+}
+
+const SEND_STATUS_TEXT = {
+  sent: 'ส่งเข้า LINE แล้ว',
+  'no-token': 'ยังไม่ได้ตั้ง LINE token (แสดงบนจออย่างเดียว)',
+  failed: 'ส่ง LINE ไม่สำเร็จ',
+};
+
+// ส่งรายงานให้เซิร์ฟเวอร์ส่ง LINE จริง · เซิร์ฟเวอร์คิดคะแนนใหม่เอง ไม่ใช้คะแนนจากหน้านี้
+async function notifyFamily(card, report, callerNumber) {
+  const label = card.querySelector('.f-sent');
+  let status = 'failed';
+  try {
+    const res = await fetch('/api/notify', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ report, callerNumber }),
+    });
+    const body = await res.json();
+    if (res.ok) status = body.sent ? 'sent' : body.reason ?? 'failed';
+    else console.error('notify', body.error);
+  } catch (err) {
+    console.error('notify', err);
+  }
+  label.textContent = SEND_STATUS_TEXT[status] ?? SEND_STATUS_TEXT.failed;
+  label.dataset.status = status;
 }
 
 // ในระบบจริง "transfer" = Twilio โทรหามือถือยายแล้วต่อสาย + แอปเด้งบอกก่อนว่าใครโทรมา
@@ -132,7 +159,8 @@ function handleToolCall(session, toolCall) {
     if (fc.name === REPORT_CALL_TOOL.name) {
       const report = fc.args ?? {};
       const result = scoreCall(report.signals, report.evidence, call?.callerNumber);
-      renderReport(report, result, call?.callerNumber);
+      const card = renderReport(report, result, call?.callerNumber);
+      void notifyFamily(card, report, call?.callerNumber);
       if (result.action === 'transfer') showTransfer(report);
       response = { action: result.action };
       console.log('report_call', result, report);

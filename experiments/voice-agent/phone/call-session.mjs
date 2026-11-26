@@ -3,10 +3,10 @@
 // → ส่ง LINE ทันที → AI พูดลาหรือพูดประโยคโอนสาย → Twilio โอนสายไปมือถือยาย หรือวางสาย
 
 import { EndSensitivity, GoogleGenAI, Modality, StartSensitivity } from '@google/genai';
-import { REPORT_CALL_TOOL, VOICE_NAME, buildFamilyMessage, buildSystemInstruction } from '../public/agent-config.js';
+import { REPORT_CALL_TOOL, VOICE_NAME, buildSystemInstruction } from '../public/agent-config.js';
 import { scoreCall } from '../public/risk.js';
 import { muLawPeak, muLawToPcm16, pcm24kToMuLaw8k } from './codec.mjs';
-import { broadcastLine } from './line.mjs';
+import { broadcastLine, buildLineReport } from './line.mjs';
 import { dialTwiml, hangupTwiml, updateCall } from './twilio.mjs';
 
 const SILENCE_HANGUP_MS = 8_000; // ผู้โทรเงียบเกินนี้ (ไม่นับตอน AI พูด) → AI ลาแล้ววาง
@@ -24,19 +24,6 @@ const VAD_CONFIG = {
     silenceDurationMs: 500,
   },
 };
-
-function lineText(report, result, from) {
-  const reasons = result.reasons.map((r) => `${r.weight > 0 ? '+' : ''}${r.weight} ${r.label}`).join('\n');
-  return [
-    buildFamilyMessage(report, result),
-    '',
-    `เบอร์ที่โทรเข้า: ${from || '-'}`,
-    `คะแนนเสี่ยง: ${result.score}/100`,
-    reasons ? `ที่มาของคะแนน:\n${reasons}` : '',
-  ]
-    .filter(Boolean)
-    .join('\n');
-}
 
 export class PhoneCall {
   constructor({ ws, config, isKnownCall }) {
@@ -161,7 +148,7 @@ export class PhoneCall {
       this.#log('ผล:', this.result.verdict, this.result.score, '→', this.result.action);
       responses.push({ id: fc.id, name: fc.name, response: { action: this.result.action } });
       this.#setAction(this.result.action);
-      broadcastLine(this.cfg.lineToken, lineText(this.report, this.result, this.from)).catch((e) =>
+      broadcastLine(this.cfg.lineToken, buildLineReport(this.report, this.result, this.from)).catch((e) =>
         this.#log('ส่ง LINE ไม่สำเร็จ:', e.message),
       );
     }
